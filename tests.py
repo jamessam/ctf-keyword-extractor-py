@@ -1,6 +1,6 @@
 from unittest import main, TestCase
 
-from index import get_keywords
+from extractor import get_keywords
 
 class UnitTests(TestCase):
     def setUp(self):
