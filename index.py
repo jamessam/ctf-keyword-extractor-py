@@ -17,7 +17,7 @@ SPACE_ID = os.environ['SPACE_ID']
 
 
 def copy_jpg(asset):
-    # TODO: what happens without write permissions?
+    '''Pulls images from contentful to the server running this app.'''
     url = asset.file['url']
     base = url.split('/')[-1]
     r = requests.get('https:'+url)
@@ -26,32 +26,38 @@ def copy_jpg(asset):
 
 
 def write_metadata(read_only_entry, keywords):
+    '''Writes the IPTC keywords to the contentful-management API. Returns nothing.'''
     entry = mgnt_client.entries(SPACE_ID, ENVIRONMENT_ID).find(
         read_only_entry.id)
     for keyword in keywords:
-        # Skip words already in there.
         try:
-            if keyword in entry.fields()['keywords']:
-                continue
+            if keyword in entry.fields()['keywords']: continue
         except:
             entry.fields()['keywords'] = []
         entry.fields()['keywords'].append(keyword)
     entry.save()
     entry.publish()
 
+
 def get_keywords(file_name):
+    '''Extracts and returns a list of keywords from the IPTC chunk of a jpg.'''
     keywords = []
     image = Image.open(file_name)
-    keywords_b = IptcImagePlugin.getiptcinfo(image)[(2,25)]
+    try:
+        keywords_b = IptcImagePlugin.getiptcinfo(image)[(2,25)]
+    except KeyError as ke:
+        keywords_b = []
     [keywords.append(word.decode('utf-8')) for word in keywords_b]
     return keywords
 
 
 def keywords_in_content_model(entry):
+    '''Examines the content model of a Contentful content entry for a field
+    called "keywords", assumed to be a short text list.'''
     content_type = mgnt_client.content_types(
         SPACE_ID,ENVIRONMENT_ID).find(entry.sys['content_type'].id)
     for field in content_type.fields:
-        if field.id == 'keywords' or field.id == 'keyWords':
+        if field.id == 'keywords':
             return True
     return False
 
@@ -73,8 +79,11 @@ def main():
         asset = delivery_client.asset(ASSET_ID)
         copy_jpg(asset)
 
-        keywords = get_keywords(asset.fields()['file']['fileName'])
-        write_metadata(read_only_entry, keywords)
+        try:
+            keywords = get_keywords(asset.fields()['file']['fileName'])
+            write_metadata(read_only_entry, keywords)
+        except KeyError as ke:
+            print(f'There was a problem writing metadata to the database: {ke}')
 
 
 if __name__ == '__main__':
