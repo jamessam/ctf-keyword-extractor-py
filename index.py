@@ -6,14 +6,18 @@ import requests
 import subprocess
 import sys
 
+from PIL import Image, IptcImagePlugin
+from PIL.ExifTags import TAGS
 
-SPACE_ID = os.environ['SPACE_ID']
+
 ACCESS_TOKEN = os.environ['ACCESS_TOKEN']
-MGNT_TOKEN = os.environ['MGNT_TOKEN']
 ENVIRONMENT_ID = 'master'
+MGNT_TOKEN = os.environ['MGNT_TOKEN']
+SPACE_ID = os.environ['SPACE_ID']
 
 
 def copy_jpg(asset):
+    # TODO: what happens without write permissions?
     url = asset.file['url']
     base = url.split('/')[-1]
     r = requests.get('https:'+url)
@@ -21,78 +25,60 @@ def copy_jpg(asset):
         local.write(r.content)
 
 
-def embed_metdata(read_only_entry, keywords):
+def write_metadata(read_only_entry, keywords):
     entry = mgnt_client.entries(SPACE_ID, ENVIRONMENT_ID).find(
         read_only_entry.id)
-    content_type = entry.sys['content_type'].resolve(
-        space_id=SPACE_ID, environment_id=ENVIRONMENT_ID)
+    for keyword in keywords:
+        # Skip words already in there.
+        try:
+            if keyword in entry.fields()['keywords']:
+                continue
+        except:
+            entry.fields()['keywords'] = []
+        entry.fields()['keywords'].append(keyword)
+    entry.save()
+    entry.publish()
+
+def get_keywords(file_name):
+    keywords = []
+    image = Image.open(file_name)
+    keywords_b = IptcImagePlugin.getiptcinfo(image)[(2,25)]
+    [keywords.append(word.decode('utf-8')) for word in keywords_b]
+    return keywords
+
+
+def keywords_in_content_model(entry):
+    content_type = mgnt_client.content_types(
+        SPACE_ID,ENVIRONMENT_ID).find(entry.sys['content_type'].id)
     for field in content_type.fields:
-        if field.id != 'keywords':
-            continue
-        for keyword in keywords:
-            # Skip words already in there.
-            try:
-                if keyword in entry.fields()['keywords']:
-                    continue
-            except:
-                entry.fields()['keywords'] = []
-            entry.fields()['keywords'].append(keyword)
-        entry.save()
-        entry.publish()
-
-
-def get_jpg_assets(client):
-    jpg_assets = []
-    return [asset for asset in client.assets() \
-        if asset.fields()['file']['contentType'] == 'image/jpeg']
-
-
-def run_exif_command(command):
-    output = subprocess.Popen(command, stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT, universal_newlines=True)
-    message = output.stdout.read()
-    output.stdout.close()
-    if 'file not found' in message.lower():
-        return None
-    return json.loads(message)
+        if field.id == 'keywords' or field.id == 'keyWords':
+            return True
+    return False
 
 
 def main():
-    # Find all the jpg/jpeg assets
-    jpg_assets = get_jpg_assets(delivery_client)
+    # See if there's a linked entry. If there isn't, exit.
+    linked_entries = delivery_client.entries({'links_to_asset': ASSET_ID})
+    if len(linked_entries) < 1:
+        sys.exit(f'There are no linked entries for asset {ASSET_ID}.')
 
-    # Go throught the assets
-    for asset in jpg_assets:
-        # See if there's a linked entry.
-        # If there isn't, proceed to the next asset.
-        linked_entries = delivery_client.entries(
-            {'links_to_asset': asset.sys['id']})
-        if len(linked_entries) < 1:
-            continue
+    # Get the keyword metadata for each file. If no keyword, exit.
+    # Regardless, remove the file.
+    for read_only_entry in linked_entries:
+        # Look for a keywords field in the linked entry.
+        if not keywords_in_content_model(read_only_entry):
+            sys.exit(f'There\'s no keywords field in the content model of {read_only_entry}')
 
-        # Copy the file from Contentful to a local folder
+        # If so, copy the file from Contentful to the server
+        asset = delivery_client.asset(ASSET_ID)
         copy_jpg(asset)
 
-        # Get the keyword metadata for each file. If no keyword, move on
-        # to the next asset. Regardless, remove the file.
-        command = ['exiftool', '-j', asset.file['url'].split('/')[-1]]
-        metadata = run_exif_command(command)
-        if not metadata:
-            print(f'There was a problem with {asset}')
-            continue
-        # os.remove(asset.file['url'].split('/')[-1])
-        try:
-            keywords = metadata[0]['Keywords']
-        except KeyError as e:
-            continue
-
-        # In each linked entry, see if there's a subject field in the entry
-        # for the keyword data to go into.
-        for read_only_entry in linked_entries:
-            embed_metdata(read_only_entry, keywords)
+        keywords = get_keywords(asset.fields()['file']['fileName'])
+        write_metadata(read_only_entry, keywords)
 
 
 if __name__ == '__main__':
+    ASSET_ID = sys.argv[1]
     delivery_client = ctf.Client(SPACE_ID, ACCESS_TOKEN, environment=ENVIRONMENT_ID)
     mgnt_client = mgnt.Client(MGNT_TOKEN)
     main()
