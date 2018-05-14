@@ -1,5 +1,6 @@
 import contentful as ctf
 import contentful_management as mgnt
+from flask import Flask, request
 import json
 import os
 import requests
@@ -86,8 +87,23 @@ def main():
             print(f'There was a problem writing metadata to the database: {ke}')
 
 
-if __name__ == '__main__':
-    ASSET_ID = sys.argv[1]
-    delivery_client = ctf.Client(SPACE_ID, ACCESS_TOKEN, environment=ENVIRONMENT_ID)
-    mgnt_client = mgnt.Client(MGNT_TOKEN)
+app = Flask(__name__)
+
+@app.route("/", methods=('POST',))
+def hello():
+    global ASSET_ID
+    global delivery_client
+    global mgnt_client
+
+    if request.method != 'POST':
+        return None
+    try:
+        ASSET_ID = request.form['ASSET_ID']
+        delivery_client = ctf.Client(SPACE_ID, ACCESS_TOKEN, environment=ENVIRONMENT_ID)
+        mgnt_client = mgnt.Client(MGNT_TOKEN)
+    except:
+        ASSET_ID = ''
+
     main()
+
+    return ASSET_ID
