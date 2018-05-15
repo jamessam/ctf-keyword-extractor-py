@@ -8,9 +8,11 @@ Working in the Contentful webapp, an editor attaches an image to go with the wri
 
 ![alt text](https://raw.githubusercontent.com/jamessam/ctf-keyword-extractor-py/master/docs/screen_shots/IPTC_in_preview.png "IPTC data seen in macOS Preview")
 
-Upon publishing the media asset, a webhook fires off a POST request to this app with the ASSET_ID value.
+Upon publishing the media asset, a webhook fires off a POST request to this app.
 
-Because the content model includes a keywords list field on the original content entry, this app populates into Contentful the keywords the photographer had included.
+The app calls all assets updated within the last 24 hours and cycles through them, looking at the linked entries of each asset.
+
+If the content model includes a keywords list field on the original content entry, this app populates into Contentful the keywords the photographer had included. *To read the file's embedded metadata, it will download all the images*, so keep that in mind for billing/bandwidth reasons.
 
 ![alt text](https://raw.githubusercontent.com/jamessam/ctf-keyword-extractor-py/master/docs/screen_shots/content_model_w_keywords.png "keywords seen in the Content Model")
 
