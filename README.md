@@ -12,7 +12,7 @@ Upon publishing the media asset, a webhook fires off a POST request to this app 
 
 Because the content model includes a keywords list field on the original content entry, this app populates into Contentful the keywords the photographer had included.
 
-![alt text](https://raw.githubusercontent.com/jamessam/ctf-keyword-extractor-py/master/docs/screen_shots/content_model_with_keywords.png "keywords seen in the Content Model")
+![alt text](https://raw.githubusercontent.com/jamessam/ctf-keyword-extractor-py/master/docs/screen_shots/content_model_w_keywords.png "keywords seen in the Content Model")
 
 The developer working on the project can now take those keywords for better SEO or other purpose.
 
@@ -24,4 +24,8 @@ The developer working on the project can now take those keywords for better SEO 
 
 ## Recommended architecture
 
-The best way to get started with this project is to add it to AWS Lambda via the Zappa project. You'll need to have an AWS account, [install](https://docs.aws.amazon.com/cli/latest/userguide/installing.html) and [configure](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-quick-configuration) the AWS CLI tool, and [install and configure Zappa](https://github.com/Miserlou/Zappa). The documentation at Zappa is excellent and should be followed.
+Due to the intermittent nature of this process, leveraging AWS Lambda makes a ton of sense.
+
+To quickly get started with this project and Lambda is to use the Zappa project. It will configure much of AWS for you. You are free to upload to the Lambda and configure API Gateway yourself should you choose to.
+
+To use Lambda and Zappa, you'll need to have an AWS account, [install](https://docs.aws.amazon.com/cli/latest/userguide/installing.html) and [configure](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-quick-configuration) the AWS CLI tool, and [install and configure Zappa](https://github.com/Miserlou/Zappa). The documentation at Zappa is excellent and should be followed.
