@@ -11,10 +11,13 @@ from PIL import Image, IptcImagePlugin
 from PIL.ExifTags import TAGS
 
 
-ACCESS_TOKEN = os.environ['ACCESS_TOKEN']
-ENVIRONMENT_ID = 'master'
-MGNT_TOKEN = os.environ['MGNT_TOKEN']
-SPACE_ID = os.environ['SPACE_ID']
+delivery_client = ctf.Client(
+    os.environ['SPACE_ID'],
+    os.environ['ACCESS_TOKEN'],
+    environment='master')
+mgnt_client = mgnt.Client(os.environ['MGNT_TOKEN'])
+
+app = Flask(__name__)
 
 
 def copy_jpg(asset):
@@ -22,13 +25,13 @@ def copy_jpg(asset):
     url = asset.file['url']
     base = url.split('/')[-1]
     r = requests.get('https:'+url)
-    with open(base, 'wb') as local:
+    with open(f'/tmp/{base}', 'wb') as local:
         local.write(r.content)
 
 
 def write_metadata(read_only_entry, keywords):
     '''Writes the IPTC keywords to the contentful-management API. Returns nothing.'''
-    entry = mgnt_client.entries(SPACE_ID, ENVIRONMENT_ID).find(
+    entry = mgnt_client.entries(os.environ['SPACE_ID'], 'master').find(
         read_only_entry.id)
     for keyword in keywords:
         try:
@@ -56,14 +59,23 @@ def keywords_in_content_model(entry):
     '''Examines the content model of a Contentful content entry for a field
     called "keywords", assumed to be a short text list.'''
     content_type = mgnt_client.content_types(
-        SPACE_ID,ENVIRONMENT_ID).find(entry.sys['content_type'].id)
+        os.environ['SPACE_ID'],
+        'master').find(entry.sys['content_type'].id)
     for field in content_type.fields:
         if field.id == 'keywords':
             return True
     return False
 
 
-def main():
+@app.route("/", methods=('POST',))
+def hello():
+    if request.method != 'POST':
+        return None
+    try:
+        ASSET_ID = request.form['ASSET_ID']
+    except:
+        ASSET_ID = ''
+
     # See if there's a linked entry. If there isn't, exit.
     linked_entries = delivery_client.entries({'links_to_asset': ASSET_ID})
     if len(linked_entries) < 1:
@@ -85,26 +97,6 @@ def main():
             write_metadata(read_only_entry, keywords)
         except KeyError as ke:
             print(f'There was a problem writing metadata to the database: {ke}')
-
-
-app = Flask(__name__)
-
-@app.route("/", methods=('POST',))
-def hello():
-    global ASSET_ID
-    global delivery_client
-    global mgnt_client
-
-    if request.method != 'POST':
-        return None
-    try:
-        ASSET_ID = request.form['ASSET_ID']
-        delivery_client = ctf.Client(SPACE_ID, ACCESS_TOKEN, environment=ENVIRONMENT_ID)
-        mgnt_client = mgnt.Client(MGNT_TOKEN)
-    except:
-        ASSET_ID = ''
-
-    main()
 
     return ASSET_ID
 

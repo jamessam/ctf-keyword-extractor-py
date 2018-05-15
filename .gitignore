@@ -1,3 +1,5 @@
 __pycache__/
 keys.sh
 .DS_Store
+*.json
+*.txt
