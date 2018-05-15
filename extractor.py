@@ -107,3 +107,7 @@ def hello():
     main()
 
     return ASSET_ID
+
+
+if __name__ == '__main__':
+    app.run()
