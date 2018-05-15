@@ -31,3 +31,6 @@ Due to the intermittent nature of this process, leveraging AWS Lambda makes a to
 To quickly get started with this project and Lambda is to use the Zappa project. It will configure much of AWS for you. You are free to upload to the Lambda and configure API Gateway yourself should you choose to.
 
 To use Lambda and Zappa, you'll need to have an AWS account, [install](https://docs.aws.amazon.com/cli/latest/userguide/installing.html) and [configure](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-quick-configuration) the AWS CLI tool, and [install and configure Zappa](https://github.com/Miserlou/Zappa). The documentation at Zappa is excellent and should be followed.
+
+## Test images note
+All images were downloaded from StockSnap.io and are believed to be free of copyright restrictions. Should you be the rights holder and this is not the case, please raise an issue on GitHub ASAP.
